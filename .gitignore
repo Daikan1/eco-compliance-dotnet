@@ -1,0 +1,20 @@
+## Build output
+bin/
+obj/
+
+## User-specific files
+*.user
+*.suo
+.vs/
+
+## Sensitive — senha real fica só local, nunca vai pro repositório
+appsettings.Development.json
+
+## Environment variables
+.env
+.env.*
+!.env.example
+
+## OS
+.DS_Store
+Thumbs.db

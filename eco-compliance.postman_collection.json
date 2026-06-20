@@ -1,0 +1,255 @@
+{
+  "info": {
+    "name": "Eco Compliance API (.NET)",
+    "description": "Coleção completa — 11 endpoints ESG. Faça login primeiro; o token é salvo automaticamente.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "01 - Login (gera token JWT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    pm.collectionVariables.set('token', data.token);",
+                  "    console.log('Token salvo:', data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "02 - Listar empresas (paginado)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/companies?page=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Buscar empresa por ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/companies/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies", "1"]
+            }
+          }
+        },
+        {
+          "name": "04 - Criar empresa [AUTH]",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"EcoTech Soluções Ltda\",\n  \"cnpj\": \"12.345.678/0001-99\",\n  \"sector\": \"Tecnologia Verde\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Compliance",
+      "item": [
+        {
+          "name": "05 - Listar compliance (paginado)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/compliance?page=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "compliance"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 - Listar compliance por empresa (paginado)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/compliance/company/1?page=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "compliance", "company", "1"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 - Criar registro de compliance [AUTH]",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": 1,\n  \"complianceType\": \"ISO 14001 - Gestão Ambiental\",\n  \"status\": \"Aprovado\",\n  \"reportDate\": \"2026-06-13T00:00:00\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/compliance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "compliance"]
+            }
+          }
+        },
+        {
+          "name": "08 - Atualizar registro de compliance [AUTH]",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": 1,\n  \"complianceType\": \"GRI 305 - Emissões\",\n  \"status\": \"Em Revisão\",\n  \"reportDate\": \"2026-06-13T00:00:00\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/compliance/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "compliance", "1"]
+            }
+          }
+        },
+        {
+          "name": "09 - Deletar registro de compliance [AUTH]",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/compliance/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "compliance", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ESG Indicators",
+      "item": [
+        {
+          "name": "10 - Listar indicadores ESG (paginado)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/esg-indicators?page=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "esg-indicators"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "11 - Registrar indicador ESG [AUTH]",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": 1,\n  \"indicatorType\": \"CO2\",\n  \"value\": 120.5,\n  \"unit\": \"tCO2e\",\n  \"measuredAt\": \"2026-06-13T00:00:00\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/esg-indicators",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "esg-indicators"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
