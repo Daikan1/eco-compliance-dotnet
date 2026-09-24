@@ -11,6 +11,8 @@ Este repositório aplica práticas de DevOps ao projeto: containerização com D
 
 **Integrante:** Luiz Alberto Silva de Santana, RM565199 (FIAP, 2026)
 
+**Documentação técnica (PDF):** [docs/Documentacao-DevOps-RM565199.pdf](docs/Documentacao-DevOps-RM565199.pdf)
+
 ---
 
 ## Como executar localmente com Docker
@@ -170,24 +172,42 @@ ENTRYPOINT ["dotnet", "EcoCompliance.API.dll"]
 
 ## Prints do funcionamento
 
-> As imagens ficam em [`docs/prints/`](docs/prints/).
+> Todas as imagens estão em [`docs/prints/`](docs/prints/). Execução de referência: [run #1 do pipeline](https://github.com/Daikan1/eco-compliance-dotnet/actions/runs/36061368483), commit `cf119f5`.
 
-### Pipeline
-| Evidência | Print |
-|---|---|
-| Pipeline completo (4 jobs verdes) | ![pipeline](docs/prints/01-pipeline.png) |
-| Build e testes (12 aprovados) | ![testes](docs/prints/02-testes.png) |
-| Imagem publicada no GHCR | ![ghcr](docs/prints/03-ghcr.png) |
-| Aprovação manual de produção | ![aprovacao](docs/prints/04-aprovacao.png) |
+### 1. Pipeline completo: 4 jobs verdes e aprovação manual de produção
+![Pipeline](docs/prints/01-pipeline.png)
 
-### Ambientes
-| Evidência | Print |
-|---|---|
-| Staging: `GET /` mostrando `environment: Staging` e o SHA | ![staging](docs/prints/05-staging.png) |
-| Staging: Swagger | ![staging-swagger](docs/prints/06-staging-swagger.png) |
-| Produção: `GET /` mostrando `environment: Production` e o SHA | ![producao](docs/prints/07-producao.png) |
-| Produção: Swagger | ![producao-swagger](docs/prints/08-producao-swagger.png) |
-| Local: `docker compose ps` | ![compose](docs/prints/09-compose.png) |
+### 2. Build e testes automatizados
+Etapas do job **Build & Testes**:
+
+![Etapas do job de build e testes](docs/prints/02-testes.png)
+
+Relatório gerado pelo pipeline (artefato `test-results.trx`): **12 testes aprovados, 0 falhas**.
+
+![Relatório dos testes](docs/prints/02b-testes-relatorio.png)
+
+### 3. Imagem Docker publicada no GitHub Container Registry
+![GHCR](docs/prints/03-ghcr.png)
+
+### 4. Infraestrutura na Azure (App Service Plan B1 e dois Web Apps)
+![Azure](docs/prints/04-azure.png)
+
+### 5. Staging funcionando
+`GET /` retorna `environment: Staging` e o SHA do commit. `/health` retorna `Healthy`. `/api/companies` lê do Oracle.
+
+![Staging](docs/prints/05-staging.png)
+![Swagger em staging](docs/prints/06-staging-swagger.png)
+
+### 6. Produção funcionando
+Mesma imagem (`cf119f5`) promovida após aprovação, com `environment: Production`.
+
+![Produção](docs/prints/07-producao.png)
+![Swagger em produção](docs/prints/08-producao-swagger.png)
+
+### 7. Ambiente local com Docker Compose
+Containers `eco-api` e `eco-oracle` (healthy), volume `oracle-data` e rede `eco-net`.
+
+![Docker Compose](docs/prints/09-compose.png)
 
 ---
 
@@ -232,8 +252,8 @@ eco-compliance-dotnet/
 ├── .github/workflows/ci-cd.yml   # Pipeline CI/CD
 ├── EcoCompliance.API/            # Código-fonte da API
 ├── EcoCompliance.Tests/          # Testes xUnit
-├── scripts/azure-setup.sh        # Provisionamento Azure + GitHub
-├── docs/prints/                  # Evidências
+├── scripts/                      # azure-setup.sh, set-db-password.sh, seed-demo.sh
+├── docs/                         # Documentação técnica (PDF) e prints/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
@@ -246,10 +266,10 @@ eco-compliance-dotnet/
 
 | Item | OK |
 |---|---|
-| Projeto compactado em .ZIP com estrutura organizada | ☐ |
+| Projeto compactado em .ZIP com estrutura organizada | ☑ |
 | Dockerfile funcional | ☑ |
 | docker-compose.yml ou arquivos Kubernetes | ☑ |
 | Pipeline com etapas de build, teste e deploy | ☑ |
-| README.md com instruções e prints | ☐ |
-| Documentação técnica com evidências (PDF ou PPT) | ☐ |
-| Deploy realizado nos ambientes staging e produção | ☐ |
+| README.md com instruções e prints | ☑ |
+| Documentação técnica com evidências (PDF ou PPT) | ☑ |
+| Deploy realizado nos ambientes staging e produção | ☑ |

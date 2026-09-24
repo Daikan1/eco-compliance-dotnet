@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cidades ESGInteligentes — Documentação DevOps</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root { --ink:#1b1f24; --muted:#57606a; --line:#d0d7de; --accent:#1a7f37; --accent2:#0969da; --soft:#f6f8fa; }
+  * { box-sizing: border-box; }
+  body { font: 10.5pt/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); margin: 0; }
+  h1 { font-size: 26pt; line-height: 1.15; margin: 0 0 6px; }
+  h2 { font-size: 15pt; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); }
+  h3 { font-size: 11.5pt; margin: 12px 0 5px; break-after: avoid; }
+  p { margin: 0 0 8px; }
+  code { font: 9pt Menlo, Consolas, monospace; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+  pre { break-inside: avoid; font: 7.8pt/1.4 Menlo, Consolas, monospace; background: #0d1117; color: #e6edf3; padding: 10px 12px; border-radius: 6px; margin: 6px 0 10px; white-space: pre-wrap; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.5pt; }
+  th, td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); }
+  section { page-break-before: always; }
+  figure { margin: 8px 0 12px; page-break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 6px; display: block; }
+  figcaption { font-size: 8.8pt; color: var(--muted); margin-top: 4px; }
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .tag { display: inline-block; font-size: 9pt; font-weight: 600; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 14px; }
+  .sub { font-size: 13pt; color: var(--muted); margin-bottom: 28px; }
+  .meta td { border: none; padding: 3px 0; font-size: 10.5pt; }
+  .meta td:first-child { color: var(--muted); width: 38mm; }
+  .flow { display: flex; align-items: stretch; gap: 6px; margin: 10px 0 14px; }
+  .step { flex: 1; border: 1.5px solid var(--line); border-radius: 8px; padding: 8px; font-size: 8.8pt; background: #fff; }
+  .step b { display: block; font-size: 9.5pt; margin-bottom: 2px; color: var(--accent2); }
+  .step.gate { border-color: #bf8700; }
+  .arrow { align-self: center; color: var(--muted); font-size: 14pt; }
+  .arch { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 12px; }
+  .box { border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 8.8pt; } .box p { margin: 0 0 5px; }
+  .box h4 { margin: 0 0 6px; font-size: 10pt; }
+  .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; margin: 2px 2px 0 0; font-size: 8.5pt; background: var(--soft); }
+  .ok { color: var(--accent); font-weight: 700; text-align: center; width: 18mm; }
+  .challenge td:first-child { width: 30%; font-weight: 600; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────────── CAPA ───────────────────────────── -->
+<div class="cover">
+  <div>
+    <div class="tag">FIAP · Navegando pelo mundo DevOps</div>
+    <h1>Projeto — Cidades ESGInteligentes</h1>
+    <div class="sub">Eco Compliance API: CI/CD, containerização e deploy em staging e produção</div>
+    <table class="meta">
+      <tr><td>Integrante</td><td><b>Luiz Alberto Silva de Santana</b> (RM565199)</td></tr>
+      <tr><td>Aplicação</td><td>API REST em C# / ASP.NET Core 8 para compliance ambiental (ESG)</td></tr>
+      <tr><td>Repositório</td><td>github.com/Daikan1/eco-compliance-dotnet</td></tr>
+      <tr><td>Pipeline</td><td>GitHub Actions: build, testes, imagem Docker, staging e produção</td></tr>
+      <tr><td>Staging</td><td>eco-compliance-rm565199-staging.azurewebsites.net</td></tr>
+      <tr><td>Produção</td><td>eco-compliance-rm565199-production.azurewebsites.net</td></tr>
+    </table>
+  </div>
+  <div>
+    <h3>Sumário</h3>
+    <table>
+      <tr><td>1. Descrição do pipeline: ferramenta, etapas e lógica</td></tr>
+      <tr><td>2. Docker: arquitetura, comandos e imagem criada</td></tr>
+      <tr><td>3. Prints do pipeline rodando (build, testes e deploy)</td></tr>
+      <tr><td>4. Prints dos ambientes staging e produção funcionando</td></tr>
+      <tr><td>5. Desafios encontrados e como foram resolvidos</td></tr>
+      <tr><td>6. Checklist de entrega</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ───────────────────────────── 1. PIPELINE ───────────────────────────── -->
+<section>
+  <h2>1. Descrição do pipeline</h2>
+  <p><b>Ferramenta:</b> GitHub Actions (<code>.github/workflows/ci-cd.yml</code>). O pipeline é disparado a cada <i>push</i> na branch <code>main</code>, em <i>pull requests</i> e manualmente (<code>workflow_dispatch</code>). A imagem vai para o <b>GitHub Container Registry</b> (GHCR), e o deploy é feito no <b>Azure App Service</b> (Web App for Containers, Linux), com um Web App por ambiente.</p>
+
+  <div class="flow">
+    <div class="step"><b>1 · Build &amp; Testes</b>restore, build Release e 12 testes xUnit, com relatório .trx</div>
+    <div class="arrow">→</div>
+    <div class="step"><b>2 · Imagem Docker</b>build multi-stage e push no GHCR com as tags <code>:sha</code> e <code>:latest</code></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>3 · Deploy Staging</b>Azure Web App staging e smoke test</div>
+    <div class="arrow">→</div>
+    <div class="step gate"><b>4 · Deploy Produção</b>aprovação manual, Azure Web App produção e smoke test</div>
+  </div>
+
+  <table>
+    <tr><th style="width:22%">Etapa</th><th>O que faz</th></tr>
+    <tr><td>Build &amp; Testes</td><td><code>dotnet restore</code>, <code>dotnet build -c Release</code> e <code>dotnet test</code> com logger TRX. Os resultados são publicados como artefato (<code>test-results</code>). Se algum teste falhar, o pipeline para aqui. Em <i>pull requests</i>, só esta etapa roda.</td></tr>
+    <tr><td>Imagem Docker (GHCR)</td><td>Faz o build com o Dockerfile multi-stage, usando o cache de camadas do Actions. O SHA do commit entra na imagem como <code>APP_VERSION</code>, e a imagem é publicada em <code>ghcr.io/daikan1/eco-compliance-api</code>.</td></tr>
+    <tr><td>Deploy Staging</td><td><code>azure/webapps-deploy@v3</code> aponta o Web App de staging para a imagem <code>:&lt;sha&gt;</code>. O <b>smoke test</b> consulta <code>GET /</code> até a resposta trazer o SHA novo e valida <code>GET /health</code>. Se a versão não subir em 5 minutos, o job falha.</td></tr>
+    <tr><td>Deploy Produção</td><td>Só roda se staging passou. O GitHub Environment <code>production</code> exige <b>aprovação manual</b> de um revisor. A <b>mesma imagem</b> validada em staging é promovida, e o smoke test se repete.</td></tr>
+  </table>
+
+  <h3>Lógica e boas práticas</h3>
+  <table>
+    <tr><td style="width:30%"><b>Imagem imutável</b></td><td>O artefato é construído uma única vez. Staging e produção recebem exatamente a mesma imagem <code>:&lt;sha&gt;</code>; só mudam as variáveis de ambiente.</td></tr>
+    <tr><td><b>Promoção com gate</b></td><td>O deploy em produção depende do sucesso de staging e de aprovação humana.</td></tr>
+    <tr><td><b>Segredos fora do código</b></td><td>Cada GitHub Environment guarda <code>AZURE_WEBAPP_PUBLISH_PROFILE</code> (secret) e <code>AZURE_WEBAPP_NAME</code> (variável). A connection string, a senha de admin e a chave JWT ficam nas <i>App Settings</i> de cada Web App.</td></tr>
+    <tr><td><b>Rastreabilidade</b></td><td><code>GET /</code> informa o ambiente e o commit em execução, o que permite verificar qual versão está em cada ambiente.</td></tr>
+    <tr><td><b>Infraestrutura como script</b></td><td><code>scripts/azure-setup.sh</code> provisiona Resource Group, App Service Plan (B1, East US 2), os dois Web Apps, as App Settings e os GitHub Environments.</td></tr>
+  </table>
+</section>
+
+<!-- ───────────────────────────── 2. DOCKER ───────────────────────────── -->
+<section>
+  <h2>2. Docker: arquitetura, comandos e imagem</h2>
+
+  <h3>Arquitetura</h3>
+  <div class="arch">
+    <div class="box">
+      <h4>Local: Docker Compose</h4>
+      <span class="pill">rede eco-net (bridge)</span><span class="pill">volume oracle-data</span><span class="pill">.env</span>
+      <p style="margin-top:6px"><b>api</b> (build do Dockerfile, porta 8080): sobe só depois que o Oracle está <i>healthy</i> e aplica as migrations do EF Core automaticamente.</p>
+      <p><b>oracle</b> (<code>gvenzl/oracle-free:23-slim-faststart</code>, porta 1521): Oracle 23ai Free com health check e dados persistidos no volume.</p>
+    </div>
+    <div class="box">
+      <h4>Nuvem: Azure App Service</h4>
+      <span class="pill">App Service Plan B1 Linux</span><span class="pill">East US 2</span>
+      <p style="margin-top:8px"><b>eco-compliance-rm565199-staging</b> (<code>ASPNETCORE_ENVIRONMENT=Staging</code>)</p>
+      <p><b>eco-compliance-rm565199-production</b> (<code>ASPNETCORE_ENVIRONMENT=Production</code>)</p>
+      <p>Os dois executam a imagem do GHCR e se conectam ao Oracle da FIAP (<code>oracle.fiap.com.br</code>).</p>
+    </div>
+  </div>
+
+  <h3>Dockerfile (multi-stage)</h3>
+<pre>FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY ["EcoCompliance.API/EcoCompliance.API.csproj", "EcoCompliance.API/"]
+RUN dotnet restore "EcoCompliance.API/EcoCompliance.API.csproj"   # camada cacheada
+COPY . .
+WORKDIR "/src/EcoCompliance.API"
+RUN dotnet publish "EcoCompliance.API.csproj" \
+    -c Release -o /app/publish /p:UseAppHost=false --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+ARG APP_VERSION=local
+WORKDIR /app
+EXPOSE 8080
+ENV ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_HTTP_PORTS=8080 APP_VERSION=${APP_VERSION}
+COPY --from=build /app/publish .
+USER $APP_UID                                                     # sem root
+ENTRYPOINT ["dotnet", "EcoCompliance.API.dll"]</pre>
+
+  <div class="two">
+    <div>
+      <h3>Estratégias</h3>
+      <ul style="margin:0;padding-left:16px;font-size:9pt">
+        <li>Multi-stage: o SDK fica fora da imagem final, que leva só o runtime ASP.NET</li>
+        <li>Restore em camada separada, para acelerar os rebuilds</li>
+        <li>Execução como usuário não-root (<code>$APP_UID</code>)</li>
+        <li><code>.dockerignore</code> exclui <code>.env</code>, <code>appsettings.Development.json</code>, bin/obj e docs</li>
+        <li>Credenciais entram apenas por variáveis de ambiente</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Imagem criada</h3>
+      <table>
+        <tr><th>Repositório</th><td><code>ghcr.io/daikan1/eco-compliance-api</code></td></tr>
+        <tr><th>Tags</th><td><code>latest</code>, <code>cf119f524c45…</code></td></tr>
+        <tr><th>Base</th><td><code>mcr.microsoft.com/dotnet/aspnet:8.0</code></td></tr>
+        <tr><th>Tamanho</th><td>≈ 94 MB compactada</td></tr>
+        <tr><th>Plataforma</th><td>linux/amd64 (build no runner ubuntu do GitHub)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>Comandos utilizados</h3>
+<pre>cp .env.example .env                       # variáveis do ambiente local
+docker compose up -d --build               # build da imagem + sobe Oracle e API
+docker compose ps                          # status dos serviços (oracle healthy, api up)
+docker compose logs -f api                 # acompanha migrations e startup
+docker build -t eco-compliance-api .       # build avulso da imagem
+docker pull ghcr.io/daikan1/eco-compliance-api:latest
+docker compose down [-v]                   # derruba (e remove o volume do banco)</pre>
+</section>
+
+<!-- ───────────────────────────── 3. PRINTS PIPELINE ───────────────────────────── -->
+<section>
+  <h2>3. Prints do pipeline rodando</h2>
+  <figure>
+    <img src="prints/01-pipeline.png">
+    <figcaption>Figura 1: Run #1 (commit cf119f5). Os 4 jobs concluíram com sucesso em sequência, e o registro "Deployment protection rules" mostra a aprovação manual de <b>production</b> por Daikan1.</figcaption>
+  </figure>
+  <figure>
+    <img src="prints/02b-testes-relatorio.png">
+    <figcaption>Figura 2: Testes automatizados. Relatório gerado a partir do artefato <code>test-results.trx</code> publicado pelo job "Build &amp; Testes": 12 aprovados, 0 falhas.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="two">
+    <figure>
+      <img src="prints/02-testes.png">
+      <figcaption>Figura 3: Etapas do job "Build &amp; Testes": checkout, setup .NET, restore, build, testes, relatório e artefato.</figcaption>
+    </figure>
+    <figure>
+      <img src="prints/03-ghcr.png">
+      <figcaption>Figura 4: Imagem publicada no GHCR com as tags <code>latest</code> e o SHA do commit.</figcaption>
+    </figure>
+  </div>
+  <figure>
+    <img src="prints/04-azure.png">
+    <figcaption>Figura 5: Infraestrutura de deploy na Azure: plano B1 Linux (East US 2), Web Apps de staging e produção em execução e produção rodando a imagem <code>ghcr.io/daikan1/eco-compliance-api:cf119f5…</code>. Só os <b>nomes</b> das App Settings são exibidos; os valores são secretos.</figcaption>
+  </figure>
+</section>
+
+<!-- ───────────────────────────── 4. PRINTS AMBIENTES ───────────────────────────── -->
+<section>
+  <h2>4. Prints dos ambientes staging e produção</h2>
+  <figure>
+    <img src="prints/05-staging.png">
+    <figcaption>Figura 6: <b>Staging</b>. <code>GET /</code> retorna <code>environment: Staging</code> e o SHA do commit, <code>/health</code> retorna <code>Healthy</code> e <code>/api/companies</code> lista os dados do Oracle.</figcaption>
+  </figure>
+  <figure>
+    <img src="prints/07-producao.png">
+    <figcaption>Figura 7: <b>Produção</b>. A mesma versão (cf119f5) foi promovida após aprovação, com <code>environment: Production</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="two">
+    <figure>
+      <img src="prints/06-staging-swagger.png">
+      <figcaption>Figura 8: Swagger UI publicado em staging.</figcaption>
+    </figure>
+    <figure>
+      <img src="prints/08-producao-swagger.png">
+      <figcaption>Figura 9: Swagger UI publicado em produção.</figcaption>
+    </figure>
+  </div>
+  <figure>
+    <img src="prints/09-compose.png">
+    <figcaption>Figura 10: Ambiente local com Docker Compose. <code>eco-api</code> e <code>eco-oracle</code> (healthy), volume <code>oracle-data</code>, rede <code>eco-net</code> e API respondendo.</figcaption>
+  </figure>
+</section>
+
+<!-- ───────────────────────────── 5. DESAFIOS ───────────────────────────── -->
+<section>
+  <h2>5. Desafios encontrados e como foram resolvidos</h2>
+  <table class="challenge">
+    <tr><th>Desafio</th><th>Solução</th></tr>
+    <tr><td>Tabelas não eram criadas em um banco novo</td><td>A migration <code>InitialCreate</code> não tinha os atributos <code>[DbContext]</code> e <code>[Migration]</code>, então o EF Core não a encontrava. Os atributos foram adicionados, junto com a opção <code>Database__ApplyMigrations</code> para aplicar as migrations no startup. O script é idempotente.</td></tr>
+    <tr><td>Oracle XE sem imagem para Apple Silicon (ARM)</td><td>A imagem <code>gvenzl/oracle-xe</code> só existe para amd64 e fica lenta com emulação. Foi trocada por <code>gvenzl/oracle-free:23-slim-faststart</code>, que é multi-arquitetura, com health check para a API só subir com o banco pronto.</td></tr>
+    <tr><td>Senha real do banco entrava na imagem</td><td>O <code>appsettings.Development.json</code> era copiado para dentro da imagem. O <code>.dockerignore</code> passou a excluí-lo, e as credenciais agora entram só por variáveis de ambiente.</td></tr>
+    <tr><td>Sem evidência visual em staging e produção</td><td>O Swagger só era habilitado em Development. Ele foi liberado em todos os ambientes, e foram criados <code>/health</code> e <code>GET /</code> (ambiente + versão), que também são usados pelo smoke test.</td></tr>
+    <tr><td>Restrições da assinatura Azure for Students</td><td>A região <code>brazilsouth</code> estava bloqueada por política, então foi usada <code>eastus2</code>. O provedor <code>Microsoft.Web</code> não estava registrado e foi registrado com <code>az provider register</code>. O deploy via publish profile exigia habilitar a autenticação básica do SCM, o que foi automatizado no script.</td></tr>
+    <tr><td>Conta Oracle bloqueada (ORA-28000)</td><td>Uma senha digitada incorretamente nas App Settings gerou falhas de login repetidas e bloqueou a conta. A senha foi redefinida com a FIAP, e o script <code>set-db-password.sh</code> foi criado para ler a senha sem eco, pedir confirmação e atualizar os dois ambientes de forma consistente.</td></tr>
+    <tr><td>Instabilidade do Oracle da FIAP (ORA-50000 timeout)</td><td>O smoke test do pipeline valida a aplicação (<code>/health</code> e versão) sem depender do banco externo, então uma instabilidade da FIAP não reprova o deploy. As validações com dados foram repetidas quando o banco estabilizou.</td></tr>
+    <tr><td>Porta 8080 já ocupada na máquina local</td><td>A porta publicada passou a ser configurável no <code>.env</code> (<code>API_PORT</code>), sem alterar o compose.</td></tr>
+    <tr><td>Git travando na pasta do projeto</td><td>A Área de Trabalho estava no iCloud com "Otimizar armazenamento", e os arquivos ficavam só na nuvem. A pasta foi marcada como "Manter Download".</td></tr>
+  </table>
+</section>
+
+<!-- ───────────────────────────── 6. CHECKLIST ───────────────────────────── -->
+<section>
+  <h2>6. Checklist de entrega</h2>
+  <table>
+    <tr><th>Item</th><th class="ok">OK</th></tr>
+    <tr><td>Projeto compactado em .ZIP com estrutura organizada</td><td class="ok">☑</td></tr>
+    <tr><td>Dockerfile funcional</td><td class="ok">☑</td></tr>
+    <tr><td>docker-compose.yml ou arquivos Kubernetes</td><td class="ok">☑</td></tr>
+    <tr><td>Pipeline com etapas de build, teste e deploy</td><td class="ok">☑</td></tr>
+    <tr><td>README.md com instruções e prints</td><td class="ok">☑</td></tr>
+    <tr><td>Documentação técnica com evidências (PDF ou PPT)</td><td class="ok">☑</td></tr>
+    <tr><td>Deploy realizado nos ambientes staging e produção</td><td class="ok">☑</td></tr>
+  </table>
+
+  <h3>Tecnologias utilizadas</h3>
+  <table>
+    <tr><td style="width:30%"><b>Aplicação</b></td><td>C#, .NET 8, ASP.NET Core Web API, Entity Framework Core 8, Oracle.EntityFrameworkCore, JWT, Swagger</td></tr>
+    <tr><td><b>Testes</b></td><td>xUnit, Moq</td></tr>
+    <tr><td><b>Containers</b></td><td>Docker (multi-stage), Docker Compose, Oracle Database 23ai Free</td></tr>
+    <tr><td><b>CI/CD</b></td><td>GitHub Actions, GitHub Environments (aprovação manual), GitHub Container Registry</td></tr>
+    <tr><td><b>Nuvem</b></td><td>Azure App Service (Web App for Containers, Linux), Azure CLI, Oracle FIAP</td></tr>
+  </table>
+</section>
+
+</body>
+</html>
