@@ -81,20 +81,49 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// ── Health checks (usado pelo pipeline e pelo Azure App Service) ─────────────
+builder.Services.AddHealthChecks();
+
 // ─────────────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
+// ── Migrations automáticas (Database__ApplyMigrations=true) ─────────────────
+if (app.Configuration.GetValue<bool>("Database:ApplyMigrations"))
+{
+    using var scope = app.Services.CreateScope();
+    try
+    {
+        scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+        app.Logger.LogInformation("Migrations aplicadas com sucesso");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Falha ao aplicar migrations — a API sobe mesmo assim");
+    }
+}
+
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Swagger habilitado em todos os ambientes (staging e produção incluídos)
+// para permitir a validação e as evidências do deploy.
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+app.MapHealthChecks("/health");
+
+// Identifica ambiente e versão (commit) em execução — evidência de deploy
+app.MapGet("/", (IWebHostEnvironment env, IConfiguration config) => Results.Ok(new
+{
+    application = "Eco Compliance API — Cidades ESG Inteligentes",
+    environment = env.EnvironmentName,
+    version     = config["APP_VERSION"] ?? "local",
+    swagger     = "/swagger",
+    health      = "/health"
+}));
 
 app.Run();
 

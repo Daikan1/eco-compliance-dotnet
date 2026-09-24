@@ -1,0 +1,153 @@
+name: CI/CD — Eco Compliance API
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  IMAGE_NAME: eco-compliance-api
+
+jobs:
+  # ── 1. Build + testes automatizados ────────────────────────────────────────
+  build-test:
+    name: Build & Testes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore EcoCompliance.sln
+
+      - name: Build
+        run: dotnet build EcoCompliance.sln -c Release --no-restore
+
+      - name: Testes (xUnit)
+        run: >
+          dotnet test EcoCompliance.sln -c Release --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory TestResults
+
+      - name: Relatório de testes
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Resultados dos testes xUnit
+          path: TestResults/*.trx
+          reporter: dotnet-trx
+
+      - name: Publicar resultados como artefato
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: TestResults
+
+  # ── 2. Build da imagem Docker + push no GitHub Container Registry ─────────
+  docker:
+    name: Imagem Docker (GHCR)
+    needs: build-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.vars.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Definir nome da imagem
+        id: vars
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: APP_VERSION=${{ github.sha }}
+          tags: |
+            ${{ steps.vars.outputs.image }}:${{ github.sha }}
+            ${{ steps.vars.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 3. Deploy em STAGING (Azure App Service) ──────────────────────────────
+  deploy-staging:
+    name: Deploy Staging
+    needs: docker
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.webapp-url }}
+    steps:
+      - name: Deploy no Azure Web App (staging)
+        id: deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: ${{ needs.docker.outputs.image }}:${{ github.sha }}
+
+      - name: Smoke test (health + versão)
+        run: |
+          URL="${{ steps.deploy.outputs.webapp-url }}"
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/" | grep -q "${{ github.sha }}" && curl -fsS "$URL/health"; then
+              echo ""; echo "✅ Staging respondendo com a versão ${{ github.sha }}"; exit 0
+            fi
+            echo "Aguardando staging subir... ($i/30)"; sleep 10
+          done
+          echo "❌ Staging não respondeu com a nova versão"; exit 1
+
+  # ── 4. Deploy em PRODUÇÃO (exige aprovação manual no environment) ────────
+  deploy-production:
+    name: Deploy Produção
+    needs: [docker, deploy-staging]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.webapp-url }}
+    steps:
+      - name: Deploy no Azure Web App (produção)
+        id: deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: ${{ needs.docker.outputs.image }}:${{ github.sha }}
+
+      - name: Smoke test (health + versão)
+        run: |
+          URL="${{ steps.deploy.outputs.webapp-url }}"
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/" | grep -q "${{ github.sha }}" && curl -fsS "$URL/health"; then
+              echo ""; echo "✅ Produção respondendo com a versão ${{ github.sha }}"; exit 0
+            fi
+            echo "Aguardando produção subir... ($i/30)"; sleep 10
+          done
+          echo "❌ Produção não respondeu com a nova versão"; exit 1
