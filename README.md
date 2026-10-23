@@ -55,8 +55,88 @@ docker compose down -v     # parar e apagar o volume do banco
 ### Sem Docker (opcional)
 ```bash
 dotnet run --project EcoCompliance.API    # exige .NET 8 SDK e um Oracle acessível
-dotnet test                               # roda os testes
+dotnet test EcoCompliance.Tests           # testes unitários
+./scripts/run-bdd-tests.sh                # testes BDD de API (ver seção abaixo)
 ```
+
+---
+
+## Testes automatizados com BDD
+
+Os testes de API usam **BDD (Behavior Driven Development)**. Os cenários são escritos em **Gherkin em português**, executados com **Reqnroll** (sucessor oficial do SpecFlow para .NET) e validam **status code**, **corpo JSON** e **contrato (JSON Schema)** de **todos os 13 endpoints** da API.
+
+### Como funciona
+- Cada cenário sobe a **API real em memória** (`WebApplicationFactory`): rotas, autenticação JWT, validação, middleware de erros e serialização JSON passam pelo mesmo pipeline HTTP de produção.
+- Só o banco é trocado. O Oracle dá lugar ao **EF Core InMemory**, com um banco novo e isolado **por cenário**. Assim os testes são determinísticos, rodam em cerca de 2 segundos e não dependem do Oracle da FIAP.
+- Os contratos ficam em [`EcoCompliance.BddTests/Schemas/`](EcoCompliance.BddTests/Schemas/) (JSON Schema draft 2020-12, com `additionalProperties: false` e formato `date-time` validado).
+
+### Como executar
+
+| Forma | Comando | Requisito |
+|---|---|---|
+| **Docker (recomendado)** | `./scripts/run-bdd-tests.sh` | Docker |
+| .NET local | `./scripts/run-bdd-tests.sh --local` | .NET 8 SDK |
+| Docker manual | `docker build -f Dockerfile.tests -t eco-compliance-bdd .` e depois `docker run --rm -v "$PWD/TestResults:/src/TestResults" eco-compliance-bdd` | Docker |
+| **CI (GitHub Actions)** | Automático em todo push e pull request para a `main` (job **Testes BDD (API)**) | — |
+
+Relatórios gerados em `TestResults/`:
+- `relatorio-bdd.html`: relatório navegável do Reqnroll, com cada passo Gherkin e o resultado.
+- `bdd-results.trx`: resultado no formato do .NET (usado pelo pipeline).
+
+No CI, o resumo dos cenários aparece na página da execução e os relatórios ficam no artefato `relatorio-bdd`.
+
+### Funcionalidades e cenários (33 cenários: 15 positivos e 18 negativos)
+
+| Funcionalidade (`.feature`) | Pilar ESG | Cenários |
+|---|---|---|
+| [MonitoramentoApi](EcoCompliance.BddTests/Features/MonitoramentoApi.feature) | Governança: rastreabilidade de deploys | 2 |
+| [Autenticacao](EcoCompliance.BddTests/Features/Autenticacao.feature) | Governança: controle de acesso | 4 |
+| [Empresas](EcoCompliance.BddTests/Features/Empresas.feature) | Governança: cadastro das organizações monitoradas | 8 |
+| [ComplianceAmbiental](EcoCompliance.BddTests/Features/ComplianceAmbiental.feature) | Governança e compliance ambiental: integridade e rastreabilidade | 12 |
+| [IndicadoresEsg](EcoCompliance.BddTests/Features/IndicadoresEsg.feature) | Ambiental: emissões, energia e resíduos | 7 |
+
+Exemplo:
+
+```gherkin
+# language: pt
+Funcionalidade: Rastreabilidade do compliance ambiental
+
+  Contexto:
+    Dado que estou autenticado como administrador
+    E que existe a empresa "Prefeitura de São Paulo" cadastrada
+
+  Cenário: Atualizar o status de um registro mantém a rastreabilidade
+    Dado que existe o compliance "Plano de Gerenciamento de Resíduos" com status "EM_ANALISE" para a empresa "Prefeitura de São Paulo"
+    Quando atualizo o status desse registro de compliance para "CONFORME"
+    Então o status da resposta deve ser 200
+    E a resposta deve seguir o contrato "compliance"
+    E o campo "status" da resposta deve ser "CONFORME"
+```
+
+### Cobertura por endpoint
+
+| Endpoint | Status validados | Contratos (JSON Schema) |
+|---|---|---|
+| `GET /` | 200 | `app-info` |
+| `GET /health` | 200 (corpo `Healthy`) | — (texto puro) |
+| `POST /api/auth/login` | 200 · 400 · 401 | `login` · `validation-problem` · `auth-error` |
+| `POST /api/companies` | 201 · 400 · 401 | `company` · `validation-problem` |
+| `GET /api/companies/{id}` | 200 · 404 | `company` · `error` |
+| `GET /api/companies` | 200 · 400 | `company-page` · `error` |
+| `POST /api/compliance` | 201 · 400 · 404 | `compliance` · `validation-problem` · `error` |
+| `GET /api/compliance` | 200 | `compliance-page` |
+| `GET /api/compliance/company/{id}` | 200 · 404 | `compliance-page` · `error` |
+| `PUT /api/compliance/{id}` | 200 · 401 · 404 | `compliance` · `error` |
+| `DELETE /api/compliance/{id}` | 204 · 401 · 404 | `error` |
+| `GET /api/esg-indicators` | 200 | `esg-indicator-page` |
+| `POST /api/esg-indicators` | 201 · 400 · 401 · 404 | `esg-indicator` · `validation-problem` · `error` |
+
+### Adaptações na API feitas a partir dos testes
+| Problema encontrado | Correção |
+|---|---|
+| `?page=0` ou `?pageSize=0` não eram validados (`TotalPages` dividia por zero) | Paginação validada: `page >= 1` e `1 <= pageSize <= 100`. Fora disso, a resposta é **400**. |
+| Indicador ESG aceitava valor negativo (ex.: -50 tCO2e) | `Value` deve ser **>= 0**. Fora disso, a resposta é **400** (integridade dos dados ESG). |
+| Datas vindas do Oracle eram emitidas sem fuso horário, o que viola o contrato `date-time` (RFC 3339) | Datas sempre em **UTC** com sufixo `Z` (`UtcDateTimeConverter`). |
 
 ---
 
@@ -80,7 +160,8 @@ push na main
 
 | # | Job | O que faz |
 |---|---|---|
-| 1 | **Build & Testes** | `dotnet restore`, `dotnet build -c Release` e `dotnet test` (12 testes xUnit com Moq). Publica o relatório dos testes na aba *Checks* e os arquivos `.trx` como artefato. Em pull request, o pipeline para aqui. |
+| 1 | **Build & Testes** | `dotnet restore`, `dotnet build -c Release` e `dotnet test` (12 testes unitários xUnit com Moq). Publica os arquivos `.trx` como artefato. |
+| 1b | **Testes BDD (API)** | Roda em paralelo ao job 1: executa os 33 cenários Gherkin (Reqnroll), publica o resumo na página da execução e o relatório HTML no artefato `relatorio-bdd`. Em pull request, o pipeline para aqui. |
 | 2 | **Imagem Docker (GHCR)** | Faz o build da imagem com o [Dockerfile](Dockerfile), injeta o commit SHA como `APP_VERSION` e publica no GHCR com as tags `:<sha>` e `:latest`. Usa cache de camadas do GitHub Actions. |
 | 3 | **Deploy Staging** | Atualiza o Web App de staging para a imagem `:<sha>` via `azure/webapps-deploy`. O *smoke test* consulta `GET /` até a resposta trazer o SHA novo e confere `GET /health`. |
 | 4 | **Deploy Produção** | Só roda se staging passou. O environment `production` exige **aprovação manual** no GitHub. Faz o deploy da **mesma imagem** testada em staging e repete o smoke test. |
@@ -219,7 +300,7 @@ Containers `eco-api` e `eco-oracle` (healthy), volume `oracle-data` e rede `eco-
 | Persistência | Oracle Database (FIAP / Oracle 23ai Free no Docker), Entity Framework Core 8, Oracle.EntityFrameworkCore |
 | Segurança | JWT Bearer Authentication |
 | Documentação da API | Swagger (Swashbuckle) |
-| Testes | xUnit, Moq |
+| Testes | xUnit, Moq, **Reqnroll** (BDD/Gherkin), **JsonSchema.Net** (testes de contrato), WebApplicationFactory + EF Core InMemory |
 | Containers | Docker (multi-stage), Docker Compose |
 | CI/CD | GitHub Actions, GitHub Environments, GitHub Container Registry |
 | Nuvem | Azure App Service (Web App for Containers, Linux) |
@@ -251,10 +332,17 @@ Containers `eco-api` e `eco-oracle` (healthy), volume `oracle-data` e rede `eco-
 eco-compliance-dotnet/
 ├── .github/workflows/ci-cd.yml   # Pipeline CI/CD
 ├── EcoCompliance.API/            # Código-fonte da API
-├── EcoCompliance.Tests/          # Testes xUnit
-├── scripts/                      # azure-setup.sh, set-db-password.sh, seed-demo.sh
+├── EcoCompliance.Tests/          # Testes unitários xUnit
+├── EcoCompliance.BddTests/       # Testes BDD de API
+│   ├── Features/                 #   cenários Gherkin (.feature)
+│   ├── Steps/                    #   step definitions (C#)
+│   ├── Schemas/                  #   contratos JSON Schema
+│   ├── Support/                  #   API em memória, contexto e validador de contrato
+│   └── reqnroll.json             #   idioma pt-BR e relatório HTML
+├── scripts/                      # azure-setup.sh, set-db-password.sh, seed-demo.sh, run-bdd-tests.sh, bdd-summary.py
 ├── docs/                         # Documentação técnica (PDF) e prints/
 ├── Dockerfile
+├── Dockerfile.tests              # Imagem para rodar os testes BDD
 ├── docker-compose.yml
 ├── .env.example
 └── README.md

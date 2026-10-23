@@ -1,5 +1,6 @@
 using System.Text;
 using EcoCompliance.API.Data;
+using EcoCompliance.API.Json;
 using EcoCompliance.API.Middleware;
 using EcoCompliance.API.Repositories;
 using EcoCompliance.API.Repositories.Interfaces;
@@ -46,7 +47,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // ── Controllers + Validation ──────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter()));
 
 // ── Swagger ───────────────────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();

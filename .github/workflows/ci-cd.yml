@@ -34,9 +34,9 @@ jobs:
       - name: Build
         run: dotnet build EcoCompliance.sln -c Release --no-restore
 
-      - name: Testes (xUnit)
+      - name: Testes unitários (xUnit)
         run: >
-          dotnet test EcoCompliance.sln -c Release --no-build
+          dotnet test EcoCompliance.Tests/EcoCompliance.Tests.csproj -c Release --no-build
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
 
@@ -55,11 +55,50 @@ jobs:
           name: test-results
           path: TestResults
 
+  # ── 1b. Testes BDD de API (Reqnroll + Gherkin + JSON Schema) ──────────────
+  bdd-tests:
+    name: Testes BDD (API)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore EcoCompliance.BddTests/EcoCompliance.BddTests.csproj
+
+      - name: Build
+        run: dotnet build EcoCompliance.BddTests/EcoCompliance.BddTests.csproj -c Release --no-restore
+
+      - name: Cenários BDD (Gherkin)
+        run: >
+          dotnet test EcoCompliance.BddTests/EcoCompliance.BddTests.csproj -c Release --no-build
+          --logger "trx;LogFileName=bdd-results.trx"
+          --logger "console;verbosity=normal"
+          --results-directory TestResults
+
+      - name: Resumo dos cenários
+        if: always()
+        run: python3 scripts/bdd-summary.py TestResults/bdd-results.trx >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar relatório BDD (HTML + TRX)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relatorio-bdd
+          path: TestResults
+
   # ── 2. Build da imagem Docker + push no GitHub Container Registry ─────────
   docker:
     name: Imagem Docker (GHCR)
-    needs: build-test
-    if: github.event_name != 'pull_request'
+    needs: [build-test, bdd-tests]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -13,6 +13,7 @@ public class EsgIndicatorRequest
     public string IndicatorType { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Value is required")]
+    [Range(0, double.MaxValue, ErrorMessage = "Value must be greater than or equal to 0")]
     public double Value { get; set; }
 
     [MaxLength(50)]

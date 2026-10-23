@@ -15,6 +15,8 @@ public class CompanyService : ICompanyService
 
     public async Task<PagedResult<CompanyResponse>> GetAllAsync(int page, int pageSize)
     {
+        Pagination.Validate(page, pageSize);
+
         var (items, total) = await _repository.GetAllAsync(page, pageSize);
         return new PagedResult<CompanyResponse>
         {
