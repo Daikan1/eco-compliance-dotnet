@@ -20,6 +20,8 @@ public class EsgIndicatorService : IEsgIndicatorService
 
     public async Task<PagedResult<EsgIndicatorResponse>> GetAllAsync(int page, int pageSize)
     {
+        Pagination.Validate(page, pageSize);
+
         var (items, total) = await _repository.GetAllAsync(page, pageSize);
         return new PagedResult<EsgIndicatorResponse>
         {

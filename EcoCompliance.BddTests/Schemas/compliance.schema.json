@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Registro de compliance",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "companyId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "companyName": {
+      "type": "string"
+    },
+    "complianceType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reportDate": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "id",
+    "companyId",
+    "companyName",
+    "complianceType",
+    "status",
+    "reportDate"
+  ],
+  "additionalProperties": false
+}

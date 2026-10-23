@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schemas.reqnroll.net/reqnroll-config-latest.json",
+  "language": {
+    "feature": "pt-BR",
+    "binding": "en-US"
+  },
+  "formatters": {
+    "html": {
+      "outputFilePath": "../../../../TestResults/relatorio-bdd.html"
+    },
+    "message": {
+      "outputFilePath": "../../../../TestResults/relatorio-bdd.ndjson"
+    }
+  }
+}

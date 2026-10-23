@@ -20,6 +20,8 @@ public class ComplianceService : IComplianceService
 
     public async Task<PagedResult<ComplianceResponse>> GetAllAsync(int page, int pageSize)
     {
+        Pagination.Validate(page, pageSize);
+
         var (items, total) = await _repository.GetAllAsync(page, pageSize);
         return new PagedResult<ComplianceResponse>
         {
@@ -32,6 +34,8 @@ public class ComplianceService : IComplianceService
 
     public async Task<PagedResult<ComplianceResponse>> GetByCompanyAsync(long companyId, int page, int pageSize)
     {
+        Pagination.Validate(page, pageSize);
+
         _ = await _companyRepository.GetByIdAsync(companyId)
             ?? throw new NotFoundException(nameof(Company), companyId);
 

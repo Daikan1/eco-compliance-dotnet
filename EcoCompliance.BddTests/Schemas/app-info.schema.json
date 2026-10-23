@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Identificação da API (GET /)",
+  "type": "object",
+  "properties": {
+    "application": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "swagger": {
+      "const": "/swagger"
+    },
+    "health": {
+      "const": "/health"
+    }
+  },
+  "required": [
+    "application",
+    "environment",
+    "version",
+    "swagger",
+    "health"
+  ],
+  "additionalProperties": false
+}
