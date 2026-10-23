@@ -18,7 +18,9 @@ if [[ "${1:-}" == "--local" ]]; then
     --logger "console;verbosity=normal" \
     --results-directory TestResults || status=$?
 else
-  docker build -f Dockerfile.tests -t eco-compliance-bdd .
+  echo "▶ Construindo a imagem de testes (Dockerfile.tests)..."
+  docker build -q -f Dockerfile.tests -t eco-compliance-bdd . >/dev/null
+  echo "▶ Executando os cenários BDD..."
   docker run --rm -v "$PWD/TestResults:/src/TestResults" eco-compliance-bdd || status=$?
 fi
 

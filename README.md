@@ -85,6 +85,12 @@ Relatórios gerados em `TestResults/`:
 
 No CI, o resumo dos cenários aparece na página da execução e os relatórios ficam no artefato `relatorio-bdd`.
 
+**Documentação e evidências:** [docs/bdd/Documentacao-Testes-BDD-RM565199.pdf](docs/bdd/Documentacao-Testes-BDD-RM565199.pdf), com os cenários Gherkin detalhados, os prints de configuração e as evidências de execução local e no CI. As imagens ficam em [`docs/bdd/prints/`](docs/bdd/prints/).
+
+| Execução local (Docker): 33/33 aprovados | Relatório HTML gerado no GitHub Actions |
+|---|---|
+| ![Execução local](docs/bdd/prints/01a-execucao-local.png) | ![Relatório no CI](docs/bdd/prints/05-relatorio-ci.png) |
+
 ### Funcionalidades e cenários (33 cenários: 15 positivos e 18 negativos)
 
 | Funcionalidade (`.feature`) | Pilar ESG | Cenários |
